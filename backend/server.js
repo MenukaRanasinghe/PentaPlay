@@ -3,6 +3,8 @@ import cors from "cors";
 import snakeLadderRoute from "./routes/snakeLadder.js";
 import trafficRouter from "./routes/trafficSimulation.js";
 import tspRouter from "./routes/travellingSalesman.js"; 
+import hanoiRouter from "./routes/tower-hanoi.js"; 
+
 
 const app = express();
 
@@ -12,6 +14,7 @@ app.use(express.json());
 app.use("/snake-ladder", snakeLadderRoute);
 app.use("/traffic-simulation", trafficRouter); 
 app.use("/travelling-salesman", tspRouter); 
+app.use("/tower-hanoi", hanoiRouter); 
 
 app.use((err, req, res, next) => {
   console.error("Unhandled:", err);

@@ -5,7 +5,7 @@ export default function Home() {
     { name: "Snake & Ladder", href: "/snake-ladder", emoji: "🐍" },
     { name: "Traffic Simulation", href: "/traffic-simulation", emoji: "🚗" },
     { name: "Travelling Salesman", href: "/travelling-salesman", emoji: "🧭" },
-    { name: "Tower of Hanoi", href: "/tower-of-hanoi", emoji: "🗼" },
+    { name: "Tower of Hanoi", href: "/tower-hanoi", emoji: "🗼" },
     { name: "Eight Queens", href: "/eight-queens", emoji: "♕" },
   ];
 
