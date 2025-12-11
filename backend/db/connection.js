@@ -5,6 +5,7 @@ const db = await mysql.createConnection({
   user: "root", 
   password: "1234",
   database: "pentaplay",
+  connectionLimit: 5,
 });
 
 export default db;
