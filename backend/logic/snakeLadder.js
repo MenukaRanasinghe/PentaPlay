@@ -3,7 +3,7 @@ export function generateBoard(N) {
 
   const ladders = [];
   const snakes = [];
-  const occupied = new Set([1, total]); 
+  const occupied = new Set([1, total]);
 
   const taken = (x) => occupied.has(x);
   const reserve = (x) => occupied.add(x);
@@ -92,7 +92,7 @@ export function dijkstraMinThrows(board, N) {
   return -1;
 }
 
-export function buildChoices(correct, N) {
+export function buildChoices(correct) {
   const s = new Set([correct]);
   const min = Math.max(1, correct - 3);
   const max = correct + 3;
@@ -109,6 +109,18 @@ export function outcomeFor(choice, correct) {
   if (choice === correct) return "win";
   if (Math.abs(choice - correct) === 1) return "draw";
   return "lose";
+}
+
+export function generateSolvableRound(N, maxTries = 1000) {
+  for (let i = 0; i < maxTries; i++) {
+    const { board, ladders, snakes } = generateBoard(N);
+    const bfs = bfsMinThrows(board, N);
+    const dij = dijkstraMinThrows(board, N);
+    if (bfs !== -1 && bfs === dij) {
+      return { board, ladders, snakes, answer: bfs };
+    }
+  }
+  throw new Error("Failed to generate a solvable board");
 }
 
 function randInt(a, bInclusive) {

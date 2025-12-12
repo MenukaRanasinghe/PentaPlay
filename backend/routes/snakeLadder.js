@@ -1,7 +1,8 @@
 import express from "express";
 import db from "../db/connection.js";
+import { performance } from "node:perf_hooks";
 import {
-  generateBoard,
+  generateSolvableRound,
   bfsMinThrows,
   dijkstraMinThrows,
   buildChoices,
@@ -10,16 +11,18 @@ import {
 
 const router = express.Router();
 
-
-function safeParse(str) {
-  if (!str) return [];
-  try {
-    const val = JSON.parse(str);
-    return typeof val === "string" ? JSON.parse(val) : val;
-  } catch (e) {
-    console.error("❌ JSON parse failed:", e.message, "INPUT:", str);
-    return [];
+function safeJson(val, fallback = null) {
+  if (val == null) return fallback;
+  if (typeof val === "object") return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+    } catch {
+      return fallback;
+    }
   }
+  return fallback;
 }
 
 router.post("/new-game", async (req, res) => {
@@ -31,12 +34,10 @@ router.post("/new-game", async (req, res) => {
     }
     const N = parseInt(boardSize, 10);
     if (Number.isNaN(N) || N < 6 || N > 12) {
-      return res
-        .status(400)
-        .json({ error: "boardSize must be between 6 and 12" });
+      return res.status(400).json({ error: "boardSize must be between 6 and 12" });
     }
 
-    const { board, ladders, snakes } = generateBoard(N);
+    const { board, ladders, snakes, answer } = generateSolvableRound(N);
 
     const t1s = performance.now();
     const bfsAns = bfsMinThrows(board, N);
@@ -46,55 +47,54 @@ router.post("/new-game", async (req, res) => {
     const dijAns = dijkstraMinThrows(board, N);
     const t2e = performance.now();
 
-    const answer = bfsAns;
+    const choices = buildChoices(answer);
 
-    const [gameResult] = await db.execute(
-      "INSERT INTO games_snake_ladder (board_size, ladders_json, snakes_json) VALUES (?, ?, ?)",
-      [N, JSON.stringify(ladders), JSON.stringify(snakes)]
+    const config = {
+      playerName: playerName.trim(),
+      boardSize: N,
+      ladders,
+      snakes,
+      choices,
+      correct: answer,
+    };
+
+    const [gameRow] = await db.execute(
+      "INSERT INTO games (game_name, config_json) VALUES (?, ?)",
+      ["snake_ladder", JSON.stringify(config)]
     );
 
-    const gameId = gameResult.insertId;
+    const gameId = gameRow.insertId;
 
     await db.execute(
       `INSERT INTO algorithm_runs
-   (game_id, algorithm_name, metric_name, metric_value, time_ms)
-   VALUES
-   (?, ?, 'min_throws', ?, ?),
-   (?, ?, 'min_throws', ?, ?)`,
+       (game_id, algorithm_name, metric_name, metric_value, time_ms)
+       VALUES
+       (?, 'BFS', 'min_throws', ?, ?),
+       (?, 'Dijkstra', 'min_throws', ?, ?)`,
       [
-        gameId, "BFS", bfsAns, Math.round(t1e - t1s),
-        gameId, "Dijkstra", dijAns, Math.round(t2e - t2s),
+        gameId, bfsAns, Math.round(t1e - t1s),
+        gameId, dijAns, Math.round(t2e - t2s),
       ]
     );
 
-
-    const choices = buildChoices(answer, N);
-
-    console.log("🎮 New game created:");
-    console.log("Game ID:", gameId);
-    console.log("Board size:", N);
-    console.log("Ladders:", ladders);
-    console.log("Snakes:", snakes);
-    console.log("Correct answer:", answer);
-    console.log("Choices:", choices);
-
     return res.json({
       gameId,
-      playerName,
+      playerName: playerName.trim(),
       boardSize: N,
       choices,
       algorithms: [
         { name: "BFS", minThrows: bfsAns, timeMs: Math.round(t1e - t1s) },
         { name: "Dijkstra", minThrows: dijAns, timeMs: Math.round(t2e - t2s) },
       ],
-      boardDebug: {
-        ladders,
-        snakes,
-      },
+      boardDebug: { ladders, snakes },
     });
   } catch (err) {
     console.error("💥 Error in /new-game:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Internal server error",
+      detail: err?.message,
+      code: err?.code,
+    });
   }
 });
 
@@ -103,58 +103,43 @@ router.post("/submit", async (req, res) => {
     const { gameId, playerName, choice } = req.body;
 
     if (!gameId || !playerName || choice === undefined) {
-      return res
-        .status(400)
-        .json({ error: "gameId, playerName, and choice are required" });
+      return res.status(400).json({ error: "gameId, playerName, and choice are required" });
     }
 
-    const [[game]] = await db.execute(
-      "SELECT * FROM games_snake_ladder WHERE id = ?",
-      [gameId]
-    );
+    const [[game]] = await db.execute("SELECT * FROM games WHERE id = ?", [gameId]);
+    if (!game) return res.status(404).json({ error: "Game round not found" });
 
-    if (!game) {
-      return res.status(404).json({ error: "Game not found" });
-    }
+    const config = safeJson(game.config_json, {});
+    const correct = Number(config.correct);
 
-    const ladders = safeParse(game.ladders_json);
-    const snakes = safeParse(game.snakes_json);
-    const N = game.board_size;
-
-    const total = N * N;
-    const board = Array(total + 1).fill(-1);
-    for (const [b, t] of ladders) board[b] = t;
-    for (const [h, t] of snakes) board[h] = t;
-
-    const correct = bfsMinThrows(board, N);
     const playerChoice = Number(choice);
     const outcome = outcomeFor(playerChoice, correct);
 
-    console.log("🧩 Submit:", {
-      gameId,
-      playerName,
-      choice: playerChoice,
-      correct,
-      outcome,
-    });
-
     if (outcome === "win") {
       await db.execute(
-        "INSERT INTO correct_answers (game_id, player_name, min_throws) VALUES (?, ?, ?)",
-        [gameId, playerName, correct]
+        "INSERT INTO correct_answers (game_id, player_name, answer_json) VALUES (?, ?, ?)",
+        [
+          gameId,
+          playerName.trim(),
+          JSON.stringify({ correct_min_throws: correct, player_choice: playerChoice }),
+        ]
       );
     }
 
     return res.json({
       gameId,
-      playerName,
+      playerName: playerName.trim(),
       choice: playerChoice,
       correct,
       outcome,
     });
   } catch (err) {
     console.error("💥 Error in /submit:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Internal server error",
+      detail: err?.message,
+      code: err?.code,
+    });
   }
 });
 
