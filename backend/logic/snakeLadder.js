@@ -3,7 +3,7 @@ export function generateBoard(N) {
 
   const ladders = [];
   const snakes = [];
-  const occupied = new Set([1, total]);
+  const occupied = new Set([1, total]); 
 
   const taken = (x) => occupied.has(x);
   const reserve = (x) => occupied.add(x);
@@ -96,7 +96,9 @@ export function buildChoices(correct) {
   const s = new Set([correct]);
   const min = Math.max(1, correct - 3);
   const max = correct + 3;
+
   while (s.size < 3) s.add(randInt(min, max));
+
   const arr = Array.from(s);
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));

@@ -86,7 +86,7 @@ router.post("/new-game", async (req, res) => {
         { name: "BFS", minThrows: bfsAns, timeMs: Math.round(t1e - t1s) },
         { name: "Dijkstra", minThrows: dijAns, timeMs: Math.round(t2e - t2s) },
       ],
-      boardDebug: { ladders, snakes },
+      boardDebug: { ladders, snakes }, 
     });
   } catch (err) {
     console.error("💥 Error in /new-game:", err);
@@ -110,9 +110,19 @@ router.post("/submit", async (req, res) => {
     if (!game) return res.status(404).json({ error: "Game round not found" });
 
     const config = safeJson(game.config_json, {});
+    const storedPlayer = String(config.playerName || "").trim();
     const correct = Number(config.correct);
+    const choices = Array.isArray(config.choices) ? config.choices.map(Number) : [];
+
+    if (storedPlayer && storedPlayer !== String(playerName).trim()) {
+      return res.status(403).json({ error: "playerName does not match this game" });
+    }
 
     const playerChoice = Number(choice);
+    if (!choices.includes(playerChoice)) {
+      return res.status(400).json({ error: "Invalid choice (must be one of the 3 options)" });
+    }
+
     const outcome = outcomeFor(playerChoice, correct);
 
     if (outcome === "win") {
@@ -120,7 +130,7 @@ router.post("/submit", async (req, res) => {
         "INSERT INTO correct_answers (game_id, player_name, answer_json) VALUES (?, ?, ?)",
         [
           gameId,
-          playerName.trim(),
+          String(playerName).trim(),
           JSON.stringify({ correct_min_throws: correct, player_choice: playerChoice }),
         ]
       );
@@ -128,7 +138,7 @@ router.post("/submit", async (req, res) => {
 
     return res.json({
       gameId,
-      playerName: playerName.trim(),
+      playerName: String(playerName).trim(),
       choice: playerChoice,
       correct,
       outcome,
