@@ -46,27 +46,27 @@ router.post("/new-game", async (req, res) => {
     const dijAns = dijkstraMinThrows(board, N);
     const t2e = performance.now();
 
-    const answer = bfsAns; 
+    const answer = bfsAns;
 
     const [gameResult] = await db.execute(
-      "INSERT INTO games (board_size, ladders_json, snakes_json) VALUES (?, ?, ?)",
+      "INSERT INTO games_snake_ladder (board_size, ladders_json, snakes_json) VALUES (?, ?, ?)",
       [N, JSON.stringify(ladders), JSON.stringify(snakes)]
     );
+
     const gameId = gameResult.insertId;
 
     await db.execute(
-      "INSERT INTO algorithm_runs (game_id, algorithm_name, min_throws, time_ms) VALUES (?, ?, ?, ?), (?, ?, ?, ?)",
+      `INSERT INTO algorithm_runs
+   (game_id, algorithm_name, metric_name, metric_value, time_ms)
+   VALUES
+   (?, ?, 'min_throws', ?, ?),
+   (?, ?, 'min_throws', ?, ?)`,
       [
-        gameId,
-        "BFS",
-        bfsAns,
-        Math.round(t1e - t1s),
-        gameId,
-        "Dijkstra",
-        dijAns,
-        Math.round(t2e - t2s),
+        gameId, "BFS", bfsAns, Math.round(t1e - t1s),
+        gameId, "Dijkstra", dijAns, Math.round(t2e - t2s),
       ]
     );
+
 
     const choices = buildChoices(answer, N);
 
@@ -108,9 +108,11 @@ router.post("/submit", async (req, res) => {
         .json({ error: "gameId, playerName, and choice are required" });
     }
 
-    const [[game]] = await db.execute("SELECT * FROM games WHERE id = ?", [
-      gameId,
-    ]);
+    const [[game]] = await db.execute(
+      "SELECT * FROM games_snake_ladder WHERE id = ?",
+      [gameId]
+    );
+
     if (!game) {
       return res.status(404).json({ error: "Game not found" });
     }
