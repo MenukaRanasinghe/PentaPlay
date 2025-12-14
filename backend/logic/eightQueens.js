@@ -1,4 +1,7 @@
-const N = 8;
+import { Worker } from "worker_threads";
+import os from "os";
+
+export const N = 8;
 
 export function solutionToSig(sol) {
   return sol.join(",");
@@ -32,9 +35,10 @@ function backtrack(row, cols, diag1, diag2, current, solutions) {
 export function solveEightQueensSequential() {
   const start = performance.now();
   const solutions = [];
-  backtrack(0, new Set(), new Set(), new Set(), new Array(N), solutions);
-  const end = performance.now();
 
+  backtrack(0, new Set(), new Set(), new Set(), new Array(N), solutions);
+
+  const end = performance.now();
   return {
     solutions,
     total: solutions.length,
@@ -42,23 +46,39 @@ export function solveEightQueensSequential() {
   };
 }
 
-function backtrackFromFirstCol(firstCol, solutions) {
-  const cols = new Set([firstCol]);
-  const diag1 = new Set([0 - firstCol]);
-  const diag2 = new Set([0 + firstCol]);
-  const current = new Array(N);
-  current[0] = firstCol;
-
-  backtrack(1, cols, diag1, diag2, current, solutions);
-}
-
-export function solveEightQueensThreadedStyle() {
+export async function solveEightQueensThreaded() {
   const start = performance.now();
-  const solutions = [];
+  const cpuCount = Math.min(os.cpus().length, N);
+  const colsPerWorker = Math.ceil(N / cpuCount);
+  const workers = [];
 
-  for (let firstCol = 0; firstCol < N; firstCol++) {
-    backtrackFromFirstCol(firstCol, solutions);
+  for (let i = 0; i < cpuCount; i++) {
+    const fromCol = i * colsPerWorker;
+    const toCol = Math.min(fromCol + colsPerWorker, N);
+
+    if (fromCol >= toCol) break;
+
+    workers.push(
+      new Promise((resolve, reject) => {
+        const worker = new Worker(
+          new URL("./queenWorker.js", import.meta.url),
+          {
+            workerData: { fromCol, toCol },
+          }
+        );
+
+        worker.on("message", resolve);
+        worker.on("error", reject);
+        worker.on("exit", (code) => {
+          if (code !== 0)
+            reject(new Error(`Worker stopped with exit code ${code}`));
+        });
+      })
+    );
   }
+
+  const results = await Promise.all(workers);
+  const solutions = results.flat();
 
   const end = performance.now();
   return {
@@ -89,25 +109,17 @@ export function outcomeForQueens(choice, correctTotal) {
 export function parseSolutionPattern(raw) {
   if (!raw || typeof raw !== "string") return null;
 
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  const parts = trimmed.split(/[, ]+/).filter(Boolean);
+  const parts = raw.trim().split(/[, ]+/);
   if (parts.length !== 8) return null;
 
-  const nums = parts.map((p) => Number(p));
-  if (nums.some((n) => Number.isNaN(n))) return null;
+  const nums = parts.map(Number);
+  if (nums.some(Number.isNaN)) return null;
 
-  let min = Math.min(...nums);
-  let max = Math.max(...nums);
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
 
-  if (min >= 1 && max <= 8) {
-    return nums.map((n) => n - 1);
-  }
-
-  if (min >= 0 && max <= 7) {
-    return nums;
-  }
+  if (min >= 1 && max <= 8) return nums.map((n) => n - 1);
+  if (min >= 0 && max <= 7) return nums;
 
   return null;
 }

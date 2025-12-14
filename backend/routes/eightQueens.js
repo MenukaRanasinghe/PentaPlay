@@ -2,7 +2,7 @@ import express from "express";
 import db from "../db/connection.js";
 import {
   solveEightQueensSequential,
-  solveEightQueensThreadedStyle,
+  solveEightQueensThreaded,
   solutionToSig,
   buildChoicesQueens,
   outcomeForQueens,
@@ -14,92 +14,65 @@ const router = express.Router();
 router.post("/new-game", async (req, res) => {
   try {
     const { playerName } = req.body;
-
-    if (!playerName || typeof playerName !== "string" || !playerName.trim()) {
-      return res.status(400).json({ error: "playerName is required" });
-    }
+    if (!playerName?.trim())
+      return res.status(400).json({ error: "playerName required" });
 
     const seq = solveEightQueensSequential();
+    const thr = await solveEightQueensThreaded();
 
-    const thr = solveEightQueensThreadedStyle();
+    if (seq.total !== thr.total)
+      throw new Error("Sequential / Threaded mismatch");
 
-    if (seq.total !== thr.total) {
-      console.error(
-        "❌ EightQueens mismatch between sequential and threaded-style:",
-        seq.total,
-        thr.total
-      );
-      return res.status(500).json({ error: "Solver mismatch" });
-    }
+    const solutionSigs = seq.solutions.map(solutionToSig);
 
-    const totalSolutions = seq.total; 
-
-    const solutionSigs = seq.solutions.map((sol) => solutionToSig(sol));
-
-    const [gameResult] = await db.execute(
+    const [game] = await db.execute(
       "INSERT INTO games (game_name, config_json) VALUES (?, ?)",
       [
         "Eight Queens",
         JSON.stringify({
           boardSize: 8,
-          totalSolutions,
+          totalSolutions: seq.total,
           solutionSigs,
         }),
       ]
     );
-    const gameId = gameResult.insertId;
+
+    const gameId = game.insertId;
 
     await db.execute(
       `INSERT INTO algorithm_runs 
        (game_id, algorithm_name, metric_name, metric_value, time_ms)
-       VALUES
-       (?, ?, ?, ?, ?),
-       (?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)`,
       [
         gameId,
-        "Sequential Backtracking",
+        "Sequential",
         "total_solutions",
-        totalSolutions,
+        seq.total,
         seq.timeMs,
-
         gameId,
-        "Threaded-style Backtracking",
+        "Threaded (Worker Threads)",
         "total_solutions",
-        totalSolutions,
+        thr.total,
         thr.timeMs,
       ]
     );
 
-    const choices = buildChoicesQueens(totalSolutions);
-
-    console.log("♕ New Eight Queens game:", {
+    res.json({
       gameId,
       playerName,
-      totalSolutions,
-      choices,
-    });
-
-    return res.json({
-      gameId,
-      playerName,
-      boardSize: 8,
-      choices,
+      choices: buildChoicesQueens(seq.total),
       algorithms: [
+        { name: "Sequential", totalSolutions: seq.total, timeMs: seq.timeMs },
         {
-          name: "Sequential Backtracking",
-          totalSolutions,
-          timeMs: seq.timeMs,
-        },
-        {
-          name: "Threaded-style Backtracking",
-          totalSolutions,
+          name: "Threaded (Worker Threads)",
+          totalSolutions: thr.total,
           timeMs: thr.timeMs,
         },
       ],
     });
   } catch (err) {
-    console.error("💥 Error in /eight-queens/new-game:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -107,91 +80,66 @@ router.post("/submit", async (req, res) => {
   try {
     const { gameId, playerName, choice, solutionPattern } = req.body;
 
-    if (!gameId || !playerName || choice === undefined) {
-      return res
-        .status(400)
-        .json({ error: "gameId, playerName and choice are required" });
-    }
+    if (!gameId || !playerName || choice === undefined)
+      return res.status(400).json({ error: "Missing fields" });
 
-    const guess = Number(choice);
-    if (Number.isNaN(guess)) {
-      return res.status(400).json({ error: "choice must be a number" });
-    }
-
-    const [[game]] = await db.execute("SELECT * FROM games WHERE id = ?", [
-      gameId,
-    ]);
+    const [[game]] = await db.execute(
+      "SELECT * FROM games WHERE id = ?",
+      [gameId]
+    );
     if (!game) return res.status(404).json({ error: "Game not found" });
 
-    const cfg =
-      typeof game.config_json === "string"
-        ? JSON.parse(game.config_json)
-        : game.config_json;
-
+    const cfg = JSON.parse(game.config_json);
     const totalSolutions = cfg.totalSolutions;
-    const solutionSigs = cfg.solutionSigs || [];
+    const solutionSigs = cfg.solutionSigs;
 
-    const outcome = outcomeForQueens(guess, totalSolutions);
+    const outcome = outcomeForQueens(Number(choice), totalSolutions);
 
-    let solutionStatus = "none"; 
+    let solutionStatus = "none";
     let allRecognised = false;
 
-    let parsedSolution = null;
-    let playerSolutionSig = null;
-    if (solutionPattern && typeof solutionPattern === "string") {
-      parsedSolution = parseSolutionPattern(solutionPattern);
-      if (!parsedSolution) {
-        solutionStatus = "invalid";
-      } else {
-        playerSolutionSig = solutionToSig(parsedSolution);
-        if (!solutionSigs.includes(playerSolutionSig)) {
-          solutionStatus = "invalid";
-        } else {
-         
-          const [rows] = await db.execute(
-            "SELECT COALESCE(MAX(cycle_number), 1) AS currentCycle FROM queens_solution_claims"
+    if (solutionPattern) {
+      const parsed = parseSolutionPattern(solutionPattern);
+      if (!parsed) solutionStatus = "invalid";
+      else {
+        const sig = solutionToSig(parsed);
+        if (!solutionSigs.includes(sig)) solutionStatus = "invalid";
+        else {
+          const [[cycleRow]] = await db.execute(
+            "SELECT COALESCE(MAX(cycle_number),1) AS c FROM queens_solution_claims"
           );
-          let currentCycle = rows[0].currentCycle || 1;
+          let cycle = cycleRow.c;
 
-          const [existing] = await db.execute(
-            "SELECT * FROM queens_solution_claims WHERE cycle_number = ? AND solution_sig = ?",
-            [currentCycle, playerSolutionSig]
+          const [exists] = await db.execute(
+            "SELECT 1 FROM queens_solution_claims WHERE cycle_number=? AND solution_sig=?",
+            [cycle, sig]
           );
 
-          if (existing.length > 0) {
-            solutionStatus = "already_recognised";
-          } else {
+          if (exists.length) solutionStatus = "already_recognised";
+          else {
             solutionStatus = "new";
             await db.execute(
-              `INSERT INTO queens_solution_claims 
-               (cycle_number, solution_sig, player_name) 
+              `INSERT INTO queens_solution_claims (cycle_number, solution_sig, player_name)
                VALUES (?, ?, ?)`,
-              [currentCycle, playerSolutionSig, playerName]
+              [cycle, sig, playerName]
             );
 
-            const [cntRows] = await db.execute(
-              "SELECT COUNT(DISTINCT solution_sig) AS cnt FROM queens_solution_claims WHERE cycle_number = ?",
-              [currentCycle]
+            const [[cnt]] = await db.execute(
+              "SELECT COUNT(DISTINCT solution_sig) AS n FROM queens_solution_claims WHERE cycle_number=?",
+              [cycle]
             );
-            const countRecognised = cntRows[0].cnt;
-            if (countRecognised >= totalSolutions) {
+
+            if (cnt.n >= totalSolutions) {
               allRecognised = true;
+              await db.execute(
+                "INSERT INTO queens_solution_claims (cycle_number, solution_sig, player_name) VALUES (?, 'RESET', 'SYSTEM')",
+                [cycle + 1]
+              );
             }
           }
         }
       }
     }
-
-    console.log("♕ Eight Queens submit:", {
-      gameId,
-      playerName,
-      guess,
-      totalSolutions,
-      outcome,
-      solutionStatus,
-      playerSolutionSig,
-      allRecognised,
-    });
 
     if (outcome === "win") {
       await db.execute(
@@ -199,28 +147,23 @@ router.post("/submit", async (req, res) => {
         [
           gameId,
           playerName,
-          JSON.stringify({
-            totalSolutions,
-            guessed: guess,
-            solutionSig: playerSolutionSig,
-            solutionStatus,
-          }),
+          JSON.stringify({ choice, totalSolutions }),
         ]
       );
     }
 
-    return res.json({
+    res.json({
       gameId,
       playerName,
-      choice: guess,
+      choice,
       correctTotal: totalSolutions,
       outcome,
       solutionStatus,
       allRecognised,
     });
   } catch (err) {
-    console.error("💥 Error in /eight-queens/submit:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
