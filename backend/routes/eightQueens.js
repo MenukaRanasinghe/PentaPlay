@@ -17,8 +17,25 @@ router.post("/new-game", async (req, res) => {
     if (!playerName?.trim())
       return res.status(400).json({ error: "playerName required" });
 
+    const [[cycleRow]] = await db.execute(
+      "SELECT COALESCE(MAX(cycle_number),1) AS c FROM queens_solution_claims"
+    );
+    const cycle = cycleRow.c;
+
+    const [claimedRows] = await db.execute(
+      "SELECT solution_sig FROM queens_solution_claims WHERE cycle_number=?",
+      [cycle]
+    );
+
+    const claimedSigs = new Set(
+      claimedRows.map(r => r.solution_sig)
+    );
+
+
     const seq = solveEightQueensSequential();
-    const example = seq.solutions[0];
+    const example = seq.solutions.find(
+      sol => !claimedSigs.has(solutionToSig(sol))
+    );
 
     console.log("♕ Example Correct Eight Queens Solution:");
     example.forEach((col, row) => {
@@ -201,6 +218,44 @@ router.post("/submit", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
+
+  try {
+    const seq = solveEightQueensSequential();
+
+    const [[cycleRow]] = await db.execute(
+      "SELECT COALESCE(MAX(cycle_number),1) AS c FROM queens_solution_claims"
+    );
+    const cycle = cycleRow.c;
+
+    const [claimedRows] = await db.execute(
+      "SELECT solution_sig FROM queens_solution_claims WHERE cycle_number=?",
+      [cycle]
+    );
+
+    const claimedSigs = new Set(
+      claimedRows.map(r => r.solution_sig)
+    );
+
+    const nextExample = seq.solutions.find(
+      sol => !claimedSigs.has(solutionToSig(sol))
+    );
+
+    if (!nextExample) {
+      console.log("♕ All Eight Queens solutions already recognised for this cycle.");
+    } else {
+      console.log("♕ Next Available Eight Queens Solution:");
+      nextExample.forEach((col, row) => {
+        console.log(`Row ${row + 1} → Column ${col + 1}`);
+      });
+      console.log(
+        "Pattern to submit:",
+        nextExample.map(c => c + 1).join(",")
+      );
+    }
+  } catch (e) {
+    console.error("Failed to compute next solution:", e.message);
+  }
+
 });
 
 export default router;

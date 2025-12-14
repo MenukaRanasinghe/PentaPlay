@@ -121,7 +121,7 @@ export default function TowerOfHanoiPage() {
         {
           gameId,
           playerName,
-          movesGuess: Number(movesGuess), 
+          movesGuess: Number(movesGuess),
           sequenceText,
         }
       );
@@ -183,7 +183,7 @@ export default function TowerOfHanoiPage() {
 
                 <button
                   onClick={submitAnswer}
-                  className="h-12 bg-green-600 rounded-xl font-semibold"
+                  className="h-12 bg-blue-600 rounded-xl font-semibold"
                 >
                   Submit Answer
                 </button>
@@ -192,13 +192,12 @@ export default function TowerOfHanoiPage() {
 
             {result && (
               <div
-                className={`p-4 rounded-xl text-center ${
-                  result.outcome === "win"
+                className={`p-4 rounded-xl text-center ${result.outcome === "win"
                     ? "bg-green-500/20 text-green-300"
                     : result.outcome === "draw"
-                    ? "bg-yellow-500/20 text-yellow-300"
-                    : "bg-red-500/20 text-red-300"
-                }`}
+                      ? "bg-yellow-500/20 text-yellow-300"
+                      : "bg-red-500/20 text-red-300"
+                  }`}
               >
                 <p>You: {result.movesGuess}</p>
                 <p>Correct: {result.correctMoves}</p>

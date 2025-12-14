@@ -89,12 +89,10 @@ export default function EightQueensPage() {
 
       setFeedback({ status, message, found, total });
 
-      if (status === "correct") {
-        setTimeout(() => {
-          setQueens(Array(8).fill(-1));
-          setFeedback((prev) => prev ? { ...prev, message: "Board Cleared! Find the next one." } : null);
-        }, 1500);
-      }
+      setTimeout(() => {
+        setQueens(Array(8).fill(-1));
+      }, 800);
+
 
     } catch (err: any) {
       alert("Error submitting solution");

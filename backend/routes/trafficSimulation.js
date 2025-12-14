@@ -44,7 +44,15 @@ router.post("/new-game", async (req, res) => {
     const t2e = performance.now();
 
     const correctAnswer = ekFlow;
+
+    console.log("🚦 Traffic Simulation");
+    console.log("Player:", playerName.trim());
+    console.log("Correct Max Flow (A → T):", correctAnswer);
     const choices = buildChoices(correctAnswer);
+
+    console.log("Edmonds-Karp:", ekFlow);
+    console.log("Dinic:", dinicFlow);
+
 
     const config = {
       playerName: playerName.trim(),
@@ -76,11 +84,7 @@ router.post("/new-game", async (req, res) => {
       gameId,
       playerName: playerName.trim(),
       choices,
-      algorithms: [
-        { name: "Edmonds-Karp", maxFlow: ekFlow, timeMs: Math.round(t1e - t1s) },
-        { name: "Dinic", maxFlow: dinicFlow, timeMs: Math.round(t2e - t2s) },
-      ],
-      edges, 
+      edges,
     });
   } catch (err) {
     console.error("💥 Error in /traffic-simulation/new-game:", err);

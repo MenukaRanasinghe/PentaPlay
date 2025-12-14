@@ -167,7 +167,6 @@ export default function TrafficSimulation() {
 
       setGameId(res.data.gameId);
       setChoices(res.data.choices);
-      setAlgos(res.data.algorithms);
       setEdges(res.data.edges);
     } catch (err: any) {
       alert(err?.response?.data?.detail || err?.response?.data?.error || "Failed to start game");
