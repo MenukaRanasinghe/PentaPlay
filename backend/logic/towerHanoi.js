@@ -1,5 +1,5 @@
-export const PEGS_3 = ["A", "B", "D"];    
-export const PEGS_4 = ["A", "B", "C", "D"]; 
+export const PEGS_3 = ["A", "B", "D"];
+export const PEGS_4 = ["A", "B", "C", "D"];
 
 export function formatMoves(moves) {
   return moves.map(([from, to]) => `${from}->${to}`);
@@ -68,7 +68,7 @@ export function hanoi3Iterative(n, from = "A", aux = "B", to = "D") {
 }
 
 export function hanoi4NaiveVia3(n, pegs = PEGS_4) {
-  const [A, B, , D] = pegs; // A,B,C,D
+  const [A, B, , D] = pegs; 
   const moves = hanoi3Recursive(n, A, B, D, []);
   return moves;
 }
@@ -133,4 +133,66 @@ export function outcomeForHanoi(choice, correctMoves) {
   if (choice === correctMoves) return "win";
   if (Math.abs(choice - correctMoves) <= 2) return "draw";
   return "lose";
+}
+
+export function validateHanoiSequence({
+  sequenceText,
+  disks,
+  pegLabels,
+  source,
+  dest,
+}) {
+  if (!sequenceText || !sequenceText.trim()) {
+    return { valid: false, error: "Sequence is empty" };
+  }
+
+  const moves = sequenceText
+    .split(",")
+    .map(m => m.trim())
+    .filter(Boolean)
+    .map(m => {
+      const [from, to] = m.split("->");
+      return { from, to };
+    });
+
+  const pegs = {};
+  pegLabels.forEach(p => (pegs[p] = []));
+  for (let i = disks; i >= 1; i--) pegs[source].push(i);
+
+  for (let i = 0; i < moves.length; i++) {
+    const { from, to } = moves[i];
+
+    if (!pegs[from] || !pegs[to]) {
+      return { valid: false, error: `Invalid peg at move ${i + 1}` };
+    }
+
+    if (pegs[from].length === 0) {
+      return { valid: false, error: `No disk on ${from} at move ${i + 1}` };
+    }
+
+    const disk = pegs[from][pegs[from].length - 1];
+    const topDest = pegs[to][pegs[to].length - 1];
+
+    if (topDest && topDest < disk) {
+      return {
+        valid: false,
+        error: `Illegal move at step ${i + 1} (larger on smaller)`,
+      };
+    }
+
+    pegs[from].pop();
+    pegs[to].push(disk);
+  }
+
+  if (
+    pegs[dest].length !== disks ||
+    pegs[dest].some((d, i) => d !== disks - i)
+  ) {
+    return {
+      valid: false,
+      error: "Final configuration is incorrect",
+    };
+  }
+
+  return { valid: true };
 }

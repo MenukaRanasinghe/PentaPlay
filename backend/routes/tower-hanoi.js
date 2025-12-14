@@ -1,5 +1,6 @@
 import express from "express";
 import db from "../db/connection.js";
+
 import {
   PEGS_3,
   PEGS_4,
@@ -10,6 +11,7 @@ import {
   buildChoicesHanoi,
   outcomeForHanoi,
   formatMoves,
+  validateHanoiSequence,
 } from "../logic/towerHanoi.js";
 
 const router = express.Router();
@@ -176,6 +178,22 @@ router.post("/submit", async (req, res) => {
     if (!game) {
       return res.status(404).json({ error: "Game not found" });
     }
+
+    const validation = validateHanoiSequence({
+      sequenceText,
+      disks,
+      pegLabels,
+      source,
+      dest,
+    });
+
+    if (!validation.valid) {
+      return res.status(400).json({
+        error: "Invalid move sequence",
+        details: validation.error,
+      });
+    }
+
 
     const cfg =
       typeof game.config_json === "string"

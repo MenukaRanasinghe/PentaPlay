@@ -85,7 +85,11 @@ export default function TowerOfHanoiPage() {
       });
     } catch (err: any) {
       console.error(err);
-      alert(err?.response?.data?.error ?? "Failed to submit answer");
+      alert(
+        err?.response?.data?.details ??
+        err?.response?.data?.error ??
+        "Failed to submit answer"
+      );
     } finally {
       setLoading(false);
     }
@@ -228,13 +232,12 @@ export default function TowerOfHanoiPage() {
           </p>
 
           <p
-            className={`mt-3 font-bold ${
-              result.outcome === "win"
+            className={`mt-3 font-bold ${result.outcome === "win"
                 ? "text-green-700"
                 : result.outcome === "draw"
-                ? "text-yellow-700"
-                : "text-red-700"
-            }`}
+                  ? "text-yellow-700"
+                  : "text-red-700"
+              }`}
           >
             {result.outcome === "win" && "✅ You win!"}
             {result.outcome === "draw" && "🟡 Draw (close!)"}
