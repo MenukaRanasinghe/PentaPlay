@@ -41,12 +41,13 @@ const NODE_POS: Record<string, { x: number; y: number }> = {
 };
 
 function Graph({ edges }: { edges: Edge[] }) {
-  const w = 700;
-  const h = 320;
-
   return (
-    <div className="w-full overflow-auto rounded-2xl border border-white/10 bg-black/20 p-4">
-      <svg width={w} height={h} className="mx-auto block">
+    <div className="w-full rounded-2xl border border-white/10 bg-black/20 p-6">
+      <svg
+        viewBox="0 0 700 320"
+        preserveAspectRatio="xMidYMid meet"
+        className="block w-full h-auto"
+      >
         <defs>
           <marker
             id="arrow"
@@ -64,8 +65,16 @@ function Graph({ edges }: { edges: Edge[] }) {
           const a = NODE_POS[e.from];
           const b = NODE_POS[e.to];
 
-          const mx = (a.x + b.x) / 2;
-          const my = (a.y + b.y) / 2;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+          const offset = 14;
+          const ox = (-dy / len) * offset;
+          const oy = (dx / len) * offset;
+
+          const mx = (a.x + b.x) / 2 + ox;
+          const my = (a.y + b.y) / 2 + oy;
 
           return (
             <g key={idx}>
@@ -125,12 +134,13 @@ function Graph({ edges }: { edges: Edge[] }) {
         ))}
       </svg>
 
-      <div className="mt-2 text-center text-xs text-gray-300">
+      <div className="mt-3 text-center text-xs text-gray-300">
         Directed network A → T with random capacities (5–15)
       </div>
     </div>
   );
 }
+
 
 export default function TrafficSimulation() {
   const [playerName, setPlayerName] = useState("");
