@@ -105,35 +105,67 @@ router.post("/submit", async (req, res) => {
     const { gameId, playerName, choice } = req.body;
 
     if (!gameId || !playerName || choice === undefined) {
-      return res.status(400).json({ error: "gameId, playerName, and choice are required" });
+      return res.status(400).json({
+        error: "gameId, playerName, and choice are required"
+      });
     }
 
-    const [[game]] = await db.execute("SELECT * FROM games WHERE id = ?", [gameId]);
-    if (!game) return res.status(404).json({ error: "Game round not found" });
+    const [[game]] = await db.execute(
+      "SELECT * FROM games WHERE id = ?",
+      [gameId]
+    );
+
+    if (!game) {
+      return res.status(404).json({ error: "Game round not found" });
+    }
 
     const config = safeJson(game.config_json, {});
     const storedPlayer = String(config.playerName || "").trim();
     const correct = Number(config.correct);
-    const choices = Array.isArray(config.choices) ? config.choices.map(Number) : [];
+    const choices = Array.isArray(config.choices)
+      ? config.choices.map(Number)
+      : [];
 
     if (storedPlayer && storedPlayer !== String(playerName).trim()) {
-      return res.status(403).json({ error: "playerName does not match this game" });
+      return res.status(403).json({
+        error: "playerName does not match this game"
+      });
     }
 
     const playerChoice = Number(choice);
     if (!choices.includes(playerChoice)) {
-      return res.status(400).json({ error: "Invalid choice (must be one of the 3 options)" });
+      return res.status(400).json({
+        error: "Invalid choice (must be one of the 3 options)"
+      });
     }
 
     const outcome = outcomeFor(playerChoice, correct);
 
     if (outcome === "win") {
+
+      const [runs] = await db.execute(
+        "SELECT algorithm_name, time_ms FROM algorithm_runs WHERE game_id = ?",
+        [gameId]
+      );
+
+      const bfsTime =
+        runs.find(r => r.algorithm_name === "BFS")?.time_ms ?? 0;
+
+      const dijkstraTime =
+        runs.find(r => r.algorithm_name === "Dijkstra")?.time_ms ?? 0;
+
       await db.execute(
-        "INSERT INTO correct_answers (game_id, player_name, answer_json) VALUES (?, ?, ?)",
+        `INSERT INTO snake_ladder_results
+         (game_id, player_name, board_size, min_throws, player_choice, bfs_time_ms, dijkstra_time_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           gameId,
           String(playerName).trim(),
-          JSON.stringify({ correct_min_throws: correct, player_choice: playerChoice }),
+          Number(config.boardSize),
+          correct,
+          playerChoice,
+          bfsTime,
+          dijkstraTime
         ]
       );
     }
@@ -142,17 +174,17 @@ router.post("/submit", async (req, res) => {
       gameId,
       playerName: String(playerName).trim(),
       choice: playerChoice,
-      // correct,
-      outcome,
+      outcome
     });
+
   } catch (err) {
     console.error("💥 Error in /submit:", err);
     return res.status(500).json({
       error: "Internal server error",
-      detail: err?.message,
-      code: err?.code,
+      detail: err?.message
     });
   }
 });
+
 
 export default router;
