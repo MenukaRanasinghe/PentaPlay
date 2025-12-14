@@ -58,7 +58,6 @@ export default function TowerOfHanoiPage() {
       setChoices(res.data.choices);
       setAlgos(res.data.algorithms || []);
     } catch (err: any) {
-      console.error(err);
       alert(err?.response?.data?.error ?? "Failed to start Hanoi game");
     } finally {
       setLoading(false);
@@ -84,171 +83,178 @@ export default function TowerOfHanoiPage() {
         optimalSequence: res.data.optimalSequence,
       });
     } catch (err: any) {
-      console.error(err);
-      alert(
-        err?.response?.data?.details ??
-        err?.response?.data?.error ??
-        "Failed to submit answer"
-      );
+      alert(err?.response?.data?.error ?? "Failed to submit answer");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="p-8 bg-white text-gray-900 min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">🗼 Tower of Hanoi</h1>
+    <main
+      className="relative min-h-screen text-white"
+      style={{ backgroundImage: "url('/bg.jpg')" }}
+    >
+      <div className="absolute inset-0">
+        <div
+          className="absolute inset-0 bg-cover bg-center scale-110 blur-[140px]"
+          style={{ backgroundImage: "url('/bg.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-black/70" />
+      </div>
 
-      <form
-        onSubmit={startGame}
-        className="space-y-4 mb-8 border p-4 rounded w-[420px] bg-gray-50"
-      >
-        <div>
-          <label className="block font-semibold mb-1">Player Name</label>
-          <input
-            className="border p-2 w-full"
-            placeholder="Enter your name"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-          />
-        </div>
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-6 py-10">
+        <div className="w-full max-w-5xl mx-auto">
+          <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl p-6">
+            <h1 className="text-3xl font-extrabold mb-6 text-center tracking-wide">
+              🗼 Tower of Hanoi Challenge
+            </h1>
 
-        <div>
-          <p className="font-semibold mb-1">Select number of pegs</p>
-          <div className="flex gap-4 text-sm">
-            <label className="flex items-center gap-1">
-              <input
-                type="radio"
-                name="pegs"
-                value={3}
-                checked={pegs === 3}
-                onChange={() => setPegs(3)}
-              />
-              3 Pegs (classic)
-            </label>
-            <label className="flex items-center gap-1">
-              <input
-                type="radio"
-                name="pegs"
-                value={4}
-                checked={pegs === 4}
-                onChange={() => setPegs(4)}
-              />
-              4 Pegs (Frame–Stewart)
-            </label>
-          </div>
-        </div>
+            <section className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start">
+              <div className="bg-black/30 border border-white/10 rounded-2xl p-4">
+                <form onSubmit={startGame} className="grid gap-4">
+                  <input
+                    className="rounded-lg p-3 bg-black/40 border border-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Player Name"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                  />
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          {loading ? "Preparing..." : "Start Round"}
-        </button>
-      </form>
+                  <div>
+                    <p className="font-semibold mb-2 text-gray-200">
+                      Select number of pegs
+                    </p>
+                    <div className="flex gap-4 text-sm">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={pegs === 3}
+                          onChange={() => setPegs(3)}
+                        />
+                        3 Pegs
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          checked={pegs === 4}
+                          onChange={() => setPegs(4)}
+                        />
+                        4 Pegs
+                      </label>
+                    </div>
+                  </div>
 
-      {disks && source && dest && (
-        <section className="mb-4">
-          <h2 className="font-semibold mb-1">🎮 Round Info</h2>
-          <p>
-            Disks: <b>{disks}</b> &nbsp;|&nbsp; Pegs:{" "}
-            <b>{pegs}</b>
-          </p>
-          <p>
-            Source peg: <b>{source}</b> &nbsp;→ Destination peg:{" "}
-            <b>{dest}</b>
-          </p>
-          <p className="text-sm text-gray-600">
-            Rules: move one disk at a time, never place a larger disk on a smaller one.
-          </p>
-        </section>
-      )}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 transition-all font-semibold shadow-lg"
+                  >
+                    {loading ? "Preparing..." : "Start Round"}
+                  </button>
+                </form>
 
-      {choices.length > 0 && (
-        <section className="mb-6">
-          <h3 className="font-semibold mb-2">
-            🔢 Choose the minimum number of moves
-          </h3>
-          <div className="flex gap-3 mb-3">
-            {choices.map((c) => (
-              <button
-                key={c}
-                onClick={() => submitAnswer(c)}
-                disabled={loading}
-                className="border rounded px-4 py-2 hover:bg-gray-100"
-              >
-                {c} moves
-              </button>
-            ))}
-          </div>
+                {choices.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold mb-3 text-center text-gray-200">
+                      Guess the minimum moves
+                    </h3>
 
-          <div>
-            <p className="font-semibold mb-1 text-sm">
-              Sequence of moves (optional, for assignment description)
-            </p>
-            <textarea
-              className="border p-2 w-[420px] h-24 text-sm"
-              placeholder={`Example format:\nA->D, A->B, B->D, ...`}
-              value={sequenceText}
-              onChange={(e) => setSequenceText(e.target.value)}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Only the number of moves is checked for correctness, but your
-              sequence is saved in the database when you win.
-            </p>
-          </div>
-        </section>
-      )}
+                    <div className="flex flex-wrap justify-center gap-3">
+                      {choices.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => submitAnswer(c)}
+                          disabled={loading}
+                          className="w-24 py-3 rounded-xl bg-black/50 border border-white/20 hover:bg-black/70 transition font-semibold"
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
 
-      {algos.length > 0 && (
-        <section className="mb-6">
-          <h3 className="font-semibold mb-2">⏱ Algorithm timings</h3>
-          <div className="border rounded p-3 w-[420px] text-sm">
-            {algos.map((a) => (
-              <div key={a.name} className="flex justify-between mb-1">
-                <span>{a.name}</span>
-                <span>
-                  moves: <b>{a.moves}</b> • time: <b>{a.timeMs} ms</b>
-                </span>
+                    <textarea
+                      className="mt-4 w-full rounded-lg p-3 bg-black/40 border border-white/20 text-sm text-white placeholder-gray-400"
+                      placeholder="Optional move sequence (A->B, A->C, ...)"
+                      value={sequenceText}
+                      onChange={(e) => setSequenceText(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {algos.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold mb-3 text-center text-gray-200">
+                      Algorithm Results
+                    </h3>
+                    <div className="border border-white/10 rounded-xl p-4 bg-black/30 text-sm">
+                      {algos.map((a) => (
+                        <div
+                          key={a.name}
+                          className="flex justify-between border-b border-white/10 last:border-none py-1"
+                        >
+                          <span>{a.name}</span>
+                          <span>
+                            {a.moves} • {a.timeMs} ms
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {result && (
+                  <div
+                    className={`mt-6 rounded-xl p-5 text-center font-semibold ${
+                      result.outcome === "win"
+                        ? "bg-green-500/20 text-green-300"
+                        : result.outcome === "draw"
+                        ? "bg-yellow-500/20 text-yellow-300"
+                        : "bg-red-500/20 text-red-300"
+                    }`}
+                  >
+                    <p>You guessed: {result.movesGuess}</p>
+                    <p>Correct moves: {result.correctMoves}</p>
+                    <p className="mt-2 text-lg">
+                      {result.outcome === "win" && "✅ You win!"}
+                      {result.outcome === "draw" && "🟡 Draw"}
+                      {result.outcome === "lose" && "❌ You lose"}
+                    </p>
+                  </div>
+                )}
               </div>
-            ))}
+
+              <div className="bg-black/30 border border-white/10 rounded-2xl p-6">
+                <h2 className="font-semibold mb-4 text-center text-gray-200">
+                  Game Information
+                </h2>
+
+                {!disks ? (
+                  <div className="text-center text-gray-400 py-16">
+                    Start a round to generate the puzzle.
+                  </div>
+                ) : (
+                  <div className="space-y-3 text-sm text-gray-300">
+                    <p>
+                      Disks: <b className="text-white">{disks}</b>
+                    </p>
+                    <p>
+                      Pegs: <b className="text-white">{pegs}</b>
+                    </p>
+                    <p>
+                      Source → Destination:{" "}
+                      <b className="text-white">
+                        {source} → {dest}
+                      </b>
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Rules: Move one disk at a time. Never place a larger disk on a smaller one.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
-        </section>
-      )}
-
-      {result && (
-        <section className="border rounded p-4 w-[420px] bg-gray-50">
-          <h3 className="font-semibold mb-2">Result</h3>
-          <p>
-            You guessed: <b>{result.movesGuess} moves</b>
-          </p>
-          <p>
-            Correct minimum moves: <b>{result.correctMoves}</b>
-          </p>
-          <p className="mt-2 text-sm">
-            Example optimal sequence (first moves):{" "}
-            <b>{result.optimalSequence.slice(0, 10).join(", ")}{result.optimalSequence.length > 10 ? ", ..." : ""}</b>
-          </p>
-
-          <p
-            className={`mt-3 font-bold ${result.outcome === "win"
-                ? "text-green-700"
-                : result.outcome === "draw"
-                  ? "text-yellow-700"
-                  : "text-red-700"
-              }`}
-          >
-            {result.outcome === "win" && "✅ You win!"}
-            {result.outcome === "draw" && "🟡 Draw (close!)"}
-            {result.outcome === "lose" && "❌ You lose"}
-          </p>
-
-          <p className="text-xs text-gray-500 mt-2">
-            (Only wins are saved with your name, number of moves and sequences in the database.)
-          </p>
-        </section>
-      )}
+        </div>
+      </div>
     </main>
   );
 }

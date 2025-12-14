@@ -1,15 +1,17 @@
 export const PEGS_3 = ["A", "B", "D"];
 export const PEGS_4 = ["A", "B", "C", "D"];
 
-export function formatMoves(moves) {
+export function formatMoves(moves = []) {
   return moves.map(([from, to]) => `${from}->${to}`);
 }
 
 export function hanoi3Recursive(n, from, aux, to, moves = []) {
   if (n === 0) return moves;
+
   hanoi3Recursive(n - 1, from, to, aux, moves);
   moves.push([from, to]);
   hanoi3Recursive(n - 1, aux, from, to, moves);
+
   return moves;
 }
 
@@ -36,13 +38,14 @@ export function hanoi3Iterative(n, from = "A", aux = "B", to = "D") {
   function moveDisc(p1, p2) {
     const fromArr = pegs[p1];
     const toArr = pegs[p2];
+
     const top1 = fromArr[fromArr.length - 1];
     const top2 = toArr[toArr.length - 1];
 
-    if (!top1) {
+    if (top1 === undefined) {
       fromArr.push(toArr.pop());
       moves.push([p2, p1]);
-    } else if (!top2) {
+    } else if (top2 === undefined) {
       toArr.push(fromArr.pop());
       moves.push([p1, p2]);
     } else if (top1 < top2) {
@@ -68,23 +71,21 @@ export function hanoi3Iterative(n, from = "A", aux = "B", to = "D") {
 }
 
 export function hanoi4NaiveVia3(n, pegs = PEGS_4) {
-  const [A, B, , D] = pegs; 
-  const moves = hanoi3Recursive(n, A, B, D, []);
-  return moves;
+  const [A, B, , D] = pegs;
+  return hanoi3Recursive(n, A, B, D, []);
 }
 
 const fsMemo = new Map();
 
 export function frameStewart4(n, pegs = PEGS_4, from = "A", to = "D") {
   const key = `${n}|${from}|${to}`;
+
   if (fsMemo.has(key)) {
-    const cached = fsMemo.get(key);
-    return { moves: cached.map(m => [...m]) };
+    return { moves: fsMemo.get(key).map(m => [...m]) };
   }
 
-  if (n === 0) {
-    return { moves: [] };
-  }
+  if (n === 0) return { moves: [] };
+
   if (n === 1) {
     const one = [[from, to]];
     fsMemo.set(key, one);
@@ -93,7 +94,7 @@ export function frameStewart4(n, pegs = PEGS_4, from = "A", to = "D") {
 
   const auxPegs = pegs.filter(p => p !== from && p !== to);
 
-  let bestMoves = null;
+  let bestMoves = [];
   let bestCount = Infinity;
 
   for (let k = 1; k < n; k++) {
@@ -101,10 +102,10 @@ export function frameStewart4(n, pegs = PEGS_4, from = "A", to = "D") {
       const part1 = frameStewart4(k, pegs, from, mid).moves;
       const otherAux = auxPegs.find(p => p !== mid);
       const part2 = hanoi3Recursive(n - k, from, otherAux, to, []);
-
       const part3 = frameStewart4(k, pegs, mid, to).moves;
 
       const candidate = [...part1, ...part2, ...part3];
+
       if (candidate.length < bestCount) {
         bestCount = candidate.length;
         bestMoves = candidate;
@@ -126,6 +127,7 @@ export function buildChoicesHanoi(correctMoves) {
       Math.floor(Math.random() * (max - min + 1)) + min;
     s.add(cand);
   }
+
   return Array.from(s).sort(() => Math.random() - 0.5);
 }
 
@@ -188,10 +190,7 @@ export function validateHanoiSequence({
     pegs[dest].length !== disks ||
     pegs[dest].some((d, i) => d !== disks - i)
   ) {
-    return {
-      valid: false,
-      error: "Final configuration is incorrect",
-    };
+    return { valid: false, error: "Final configuration is incorrect" };
   }
 
   return { valid: true };

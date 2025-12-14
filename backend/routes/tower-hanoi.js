@@ -52,16 +52,8 @@ router.post("/new-game", async (req, res) => {
       optimalSequenceIndices = movesRec;
 
       algoResults = [
-        {
-          name: "3-Peg Recursive",
-          moves: movesRec.length,
-          timeMs: Math.round(t1e - t1s),
-        },
-        {
-          name: "3-Peg Iterative",
-          moves: movesIter.length,
-          timeMs: Math.round(t2e - t2s),
-        },
+        { name: "3-Peg Recursive", moves: movesRec.length, timeMs: Math.round(t1e - t1s) },
+        { name: "3-Peg Iterative", moves: movesIter.length, timeMs: Math.round(t2e - t2s) },
       ];
     } else {
       const t1s = performance.now();
@@ -76,16 +68,8 @@ router.post("/new-game", async (req, res) => {
       optimalSequenceIndices = fs.moves;
 
       algoResults = [
-        {
-          name: "4-Peg Frame-Stewart",
-          moves: fs.moves.length,
-          timeMs: Math.round(t1e - t1s),
-        },
-        {
-          name: "4-Peg via 3-Peg",
-          moves: naiveMoves.length,
-          timeMs: Math.round(t2e - t2s),
-        },
+        { name: "4-Peg Frame-Stewart", moves: fs.moves.length, timeMs: Math.round(t1e - t1s) },
+        { name: "4-Peg via 3-Peg", moves: naiveMoves.length, timeMs: Math.round(t2e - t2s) },
       ];
     }
 
@@ -106,28 +90,18 @@ router.post("/new-game", async (req, res) => {
         }),
       ]
     );
+
     const gameId = gameResult.insertId;
 
     const runsValues = [];
     for (const ar of algoResults) {
-      runsValues.push(
-        gameId,
-        ar.name,
-        "moves",
-        ar.moves,
-        ar.timeMs
-      );
+      runsValues.push(gameId, ar.name, "moves", ar.moves, ar.timeMs);
     }
 
-    const placeholders = algoResults
-      .map(
-        () =>
-          "(?, ?, ?, ?, ?)"
-      )
-      .join(", ");
+    const placeholders = algoResults.map(() => "(?, ?, ?, ?, ?)").join(", ");
 
     await db.execute(
-      `INSERT INTO algorithm_runs 
+      `INSERT INTO algorithm_runs
        (game_id, algorithm_name, metric_name, metric_value, time_ms)
        VALUES ${placeholders}`,
       runsValues
@@ -172,28 +146,14 @@ router.post("/submit", async (req, res) => {
         .json({ error: "gameId, playerName and movesGuess are required" });
     }
 
-    const [[game]] = await db.execute("SELECT * FROM games WHERE id = ?", [
-      gameId,
-    ]);
+    const [[game]] = await db.execute(
+      "SELECT * FROM games WHERE id = ?",
+      [gameId]
+    );
+
     if (!game) {
       return res.status(404).json({ error: "Game not found" });
     }
-
-    const validation = validateHanoiSequence({
-      sequenceText,
-      disks,
-      pegLabels,
-      source,
-      dest,
-    });
-
-    if (!validation.valid) {
-      return res.status(400).json({
-        error: "Invalid move sequence",
-        details: validation.error,
-      });
-    }
-
 
     const cfg =
       typeof game.config_json === "string"
@@ -203,6 +163,23 @@ router.post("/submit", async (req, res) => {
     const { disks, pegs, pegLabels, source, dest } = cfg || {};
     if (!disks || !pegs || !pegLabels || !source || !dest) {
       return res.status(500).json({ error: "Invalid game configuration" });
+    }
+
+    if (sequenceText && sequenceText.trim()) {
+      const validation = validateHanoiSequence({
+        sequenceText,
+        disks,
+        pegLabels,
+        source,
+        dest,
+      });
+
+      if (!validation.valid) {
+        return res.status(400).json({
+          error: "Invalid move sequence",
+          details: validation.error,
+        });
+      }
     }
 
     let correctMovesCount;
@@ -219,7 +196,6 @@ router.post("/submit", async (req, res) => {
     }
 
     const optimalSequence = formatMoves(optimalSequenceIndices);
-
     const guess = Number(movesGuess);
     const outcome = outcomeForHanoi(guess, correctMovesCount);
 
