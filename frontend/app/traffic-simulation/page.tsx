@@ -151,7 +151,7 @@ export default function TrafficSimulation() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [result, setResult] = useState<SubmitResponse | null>(null);
 
-  const title = useMemo(() => "🚦 Traffic Simulation Problem", []);
+  const title = useMemo(() => "🚦 Traffic Simulation ", []);
 
   async function startGame(e: React.FormEvent) {
     e.preventDefault();

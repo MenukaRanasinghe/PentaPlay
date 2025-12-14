@@ -83,10 +83,12 @@ router.post("/new-game", async (req, res) => {
       boardSize: N,
       choices,
       algorithms: [
-        { name: "BFS", minThrows: bfsAns, timeMs: Math.round(t1e - t1s) },
-        { name: "Dijkstra", minThrows: dijAns, timeMs: Math.round(t2e - t2s) },
+        //  { name: "BFS", minThrows: bfsAns, timeMs: Math.round(t1e - t1s) },
+        //{ name: "Dijkstra", minThrows: dijAns, timeMs: Math.round(t2e - t2s) },
+        { name: "BFS", timeMs: Math.round(t1e - t1s) },
+        { name: "Dijkstra", timeMs: Math.round(t2e - t2s) },
       ],
-      boardDebug: { ladders, snakes }, 
+      boardDebug: { ladders, snakes },
     });
   } catch (err) {
     console.error("💥 Error in /new-game:", err);
@@ -140,7 +142,7 @@ router.post("/submit", async (req, res) => {
       gameId,
       playerName: String(playerName).trim(),
       choice: playerChoice,
-      correct,
+      // correct,
       outcome,
     });
   } catch (err) {

@@ -1,4 +1,4 @@
-export const CITIES = ["A","B","C","D","E","F","G","H","I","J"];
+export const CITIES = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -90,7 +90,7 @@ export function heldKarpTsp(distanceMatrix, homeIndex, targetIndices) {
     return { distance: 0 };
   }
 
-  const t = targetIndices.slice(); 
+  const t = targetIndices.slice();
   const FULL = 1 << k;
   const dp = Array.from({ length: FULL }, () => Array(k).fill(Infinity));
 
@@ -146,3 +146,9 @@ export function outcomeForTsp(choice, correctDistance) {
 export function routeToCities(routeIndices) {
   return routeIndices.map(i => CITIES[i]);
 }
+
+// Algorithm Complexity Analysis:
+// 1. Nearest Neighbour: O(n²)
+// 2. Brute Force: O(n!)
+// 3. Held–Karp (Dynamic Programming): O(n² · 2ⁿ)
+

@@ -18,7 +18,7 @@ type SubmitResponse = {
   gameId: number;
   playerName: string;
   choice: number;
-  correct: number;
+  // correct: number;
   outcome: "win" | "lose" | "draw";
 };
 
@@ -209,14 +209,14 @@ export default function SnakeLadderQuiz() {
                 {result && (
                   <div
                     className={`mt-6 rounded-xl p-5 text-center font-semibold ${result.outcome === "win"
-                        ? "bg-green-500/20 text-green-300"
-                        : result.outcome === "draw"
-                          ? "bg-yellow-500/20 text-yellow-300"
-                          : "bg-red-500/20 text-red-300"
+                      ? "bg-green-500/20 text-green-300"
+                      : result.outcome === "draw"
+                        ? "bg-yellow-500/20 text-yellow-300"
+                        : "bg-red-500/20 text-red-300"
                       }`}
                   >
                     <p>You chose: {result.choice}</p>
-                    <p>Correct answer: {result.correct}</p>
+                    {/*  <p>Correct answer: {result.correct}</p>*/}
                     <p className="mt-2 text-lg">
                       {result.outcome === "win" && "✅ You win!"}
                       {result.outcome === "draw" && "🟡 Draw (off by 1)"}
