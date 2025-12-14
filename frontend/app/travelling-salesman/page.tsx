@@ -216,7 +216,7 @@ export default function TravellingSalesmanPage() {
                       </div>
                     )}
 
-                    {bestRoute && (
+                    {result && bestRoute && (
                       <div className="mt-3 text-xs text-gray-300">
                         Optimal route: {bestRoute.join(" → ")}
                       </div>
