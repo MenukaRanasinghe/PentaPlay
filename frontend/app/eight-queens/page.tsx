@@ -126,7 +126,7 @@ export default function EightQueensPage() {
                     relative rounded-xl border border-white/10 flex items-center justify-center transition-all
                     ${!gameId ? "opacity-50 cursor-not-allowed" : "hover:opacity-90 active:scale-95"}
                     ${isSelected
-                    ? "bg-purple-600/40 ring-2 ring-purple-400 z-10 text-2xl"
+                    ? "bg-blue-600/40 ring-2 ring-blue-400 z-10 text-2xl"
                     : isDark ? "bg-white/5" : "bg-black/25"
                   }
                 `}
@@ -262,8 +262,8 @@ export default function EightQueensPage() {
 
                     {feedback && (
                       <div className={`mt-6 w-full max-w-[420px] rounded-xl p-5 text-center font-semibold border ${feedback.status === 'correct' ? "bg-green-500/20 border-green-500/30 text-green-300" :
-                          feedback.status === 'already_recognised' ? "bg-yellow-500/20 border-yellow-500/30 text-yellow-300" :
-                            "bg-red-500/20 border-red-500/30 text-red-300"
+                        feedback.status === 'already_recognised' ? "bg-yellow-500/20 border-yellow-500/30 text-yellow-300" :
+                          "bg-red-500/20 border-red-500/30 text-red-300"
                         }`}>
                         <div className="text-lg mb-1">
                           {feedback.status === "correct" && "✅ Correct!"}

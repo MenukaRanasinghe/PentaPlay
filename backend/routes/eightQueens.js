@@ -18,6 +18,18 @@ router.post("/new-game", async (req, res) => {
       return res.status(400).json({ error: "playerName required" });
 
     const seq = solveEightQueensSequential();
+    const example = seq.solutions[0];
+
+    console.log("♕ Example Correct Eight Queens Solution:");
+    example.forEach((col, row) => {
+      console.log(`Row ${row + 1} → Column ${col + 1}`);
+    });
+
+    console.log(
+      "Pattern to submit:",
+      example.map(c => c + 1).join(",")
+    );
+
     const thr = await solveEightQueensThreaded();
 
     if (seq.total !== thr.total)
@@ -80,8 +92,10 @@ router.post("/submit", async (req, res) => {
   try {
     const { gameId, playerName, choice, solutionPattern } = req.body;
 
-    if (!gameId || !playerName || choice === undefined)
+    if (!gameId || !playerName)
       return res.status(400).json({ error: "Missing fields" });
+
+
 
     const [[game]] = await db.execute(
       "SELECT * FROM games WHERE id = ?",
@@ -89,7 +103,10 @@ router.post("/submit", async (req, res) => {
     );
     if (!game) return res.status(404).json({ error: "Game not found" });
 
-    const cfg = JSON.parse(game.config_json);
+    const cfg =
+      typeof game.config_json === "string"
+        ? JSON.parse(game.config_json)
+        : game.config_json;
     const totalSolutions = cfg.totalSolutions;
     const solutionSigs = cfg.solutionSigs;
 
@@ -103,6 +120,13 @@ router.post("/submit", async (req, res) => {
       if (!parsed) solutionStatus = "invalid";
       else {
         const sig = solutionToSig(parsed);
+        console.log("♕ Eight Queens Solution Submitted:");
+        parsed.forEach((col, row) => {
+          console.log(`Row ${row + 1} → Column ${col + 1}`);
+        });
+
+        console.log("Signature:", sig);
+
         if (!solutionSigs.includes(sig)) solutionStatus = "invalid";
         else {
           const [[cycleRow]] = await db.execute(
@@ -153,14 +177,26 @@ router.post("/submit", async (req, res) => {
     }
 
     res.json({
-      gameId,
-      playerName,
-      choice,
-      correctTotal: totalSolutions,
-      outcome,
-      solutionStatus,
-      allRecognised,
+      status:
+        solutionStatus === "new"
+          ? "correct"
+          : solutionStatus === "already_recognised"
+            ? "already_recognised"
+            : solutionStatus === "invalid"
+              ? "invalid"
+              : "error",
+
+      message:
+        solutionStatus === "new"
+          ? "New valid solution accepted!"
+          : solutionStatus === "already_recognised"
+            ? "This solution was already recognized. Try another."
+            : "Invalid solution.",
+
+      found: allRecognised ? totalSolutions : undefined,
+      total: totalSolutions,
     });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
