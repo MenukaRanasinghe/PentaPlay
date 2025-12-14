@@ -69,12 +69,16 @@ function Graph({ edges }: { edges: Edge[] }) {
           const dy = b.y - a.y;
           const len = Math.sqrt(dx * dx + dy * dy) || 1;
 
-          const offset = 14;
+          const t = 0.55;
+          const lx = a.x + dx * t;
+          const ly = a.y + dy * t;
+
+          const offset = 6;
           const ox = (-dy / len) * offset;
           const oy = (dx / len) * offset;
 
-          const mx = (a.x + b.x) / 2 + ox;
-          const my = (a.y + b.y) / 2 + oy;
+          const tx = lx + ox;
+          const ty = ly + oy;
 
           return (
             <g key={idx}>
@@ -88,24 +92,19 @@ function Graph({ edges }: { edges: Edge[] }) {
                 strokeWidth={2}
                 markerEnd="url(#arrow)"
               />
-              <rect
-                x={mx - 16}
-                y={my - 12}
-                width={32}
-                height={20}
-                rx={6}
-                fill="rgba(0,0,0,0.55)"
-                stroke="rgba(255,255,255,0.15)"
-              />
               <text
-                x={mx}
-                y={my + 3}
+                x={tx}
+                y={ty}
                 textAnchor="middle"
                 fontSize="12"
                 fill="white"
+                fontWeight="600"
+                style={{ pointerEvents: "none" }}
               >
                 {e.capacity}
               </text>
+
+
             </g>
           );
         })}
@@ -280,13 +279,12 @@ export default function TrafficSimulation() {
 
                 {result && (
                   <div
-                    className={`mt-6 rounded-xl p-5 text-center font-semibold ${
-                      result.outcome === "win"
-                        ? "bg-green-500/20 text-green-300"
-                        : result.outcome === "draw"
+                    className={`mt-6 rounded-xl p-5 text-center font-semibold ${result.outcome === "win"
+                      ? "bg-green-500/20 text-green-300"
+                      : result.outcome === "draw"
                         ? "bg-yellow-500/20 text-yellow-300"
                         : "bg-red-500/20 text-red-300"
-                    }`}
+                      }`}
                   >
                     <p>You chose: {result.choice}</p>
                     <p>Correct answer: {result.correct}</p>
