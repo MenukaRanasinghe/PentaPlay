@@ -15,6 +15,30 @@ CREATE TABLE IF NOT EXISTS games (
 
 
 
+CREATE TABLE IF NOT EXISTS algorithm_runs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  game_id INT NOT NULL,
+  algorithm_name VARCHAR(100) NOT NULL,
+
+  metric_name VARCHAR(50) NOT NULL,
+  metric_value INT NOT NULL,
+
+  time_ms INT NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_algorithm_game
+    FOREIGN KEY (game_id) REFERENCES games(id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX idx_algorithm_game
+ON algorithm_runs(game_id);
+
+
+
+
 CREATE TABLE IF NOT EXISTS snake_ladder_results (
   id INT AUTO_INCREMENT PRIMARY KEY,
   game_id INT NOT NULL,
