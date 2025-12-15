@@ -101,23 +101,34 @@ router.post("/submit", async (req, res) => {
     const { gameId, playerName, choice } = req.body;
 
     if (!gameId || !playerName || choice === undefined) {
-      return res.status(400).json({ error: "gameId, playerName, and choice are required" });
+      return res.status(400).json({
+        error: "gameId, playerName, and choice are required",
+      });
     }
 
-    const [[game]] = await db.execute("SELECT * FROM games WHERE id = ?", [gameId]);
+    const [[game]] = await db.execute(
+      "SELECT * FROM games WHERE id = ?",
+      [gameId]
+    );
     if (!game) return res.status(404).json({ error: "Game not found" });
 
     const config = safeJson(game.config_json, {});
     const storedPlayer = String(config.playerName || "").trim();
-    const storedChoices = Array.isArray(config.choices) ? config.choices.map(Number) : [];
+    const storedChoices = Array.isArray(config.choices)
+      ? config.choices.map(Number)
+      : [];
     const edges = Array.isArray(config.edges) ? config.edges : null;
 
     if (!edges) {
-      return res.status(500).json({ error: "Saved game config is invalid (edges missing)" });
+      return res.status(500).json({
+        error: "Saved game config is invalid (edges missing)",
+      });
     }
 
     if (storedPlayer && storedPlayer !== String(playerName).trim()) {
-      return res.status(403).json({ error: "playerName does not match this game round" });
+      return res.status(403).json({
+        error: "playerName does not match this game round",
+      });
     }
 
     const playerChoice = Number(choice);
@@ -126,21 +137,37 @@ router.post("/submit", async (req, res) => {
     }
 
     if (!storedChoices.includes(playerChoice)) {
-      return res.status(400).json({ error: "Invalid choice (must be one of the 3 options)" });
+      return res.status(400).json({
+        error: "Invalid choice (must be one of the 3 options)",
+      });
     }
 
     const { graph } = generateTrafficGraph(edges, false);
-
     const correct = edmondsKarpMaxFlow(graph, "A", "T");
     const outcome = outcomeFor(playerChoice, correct);
 
     if (outcome === "win") {
+      const [runs] = await db.execute(
+        "SELECT algorithm_name, time_ms FROM algorithm_runs WHERE game_id = ?",
+        [gameId]
+      );
+
+      const ekTime =
+        runs.find(r => r.algorithm_name === "Edmonds-Karp")?.time_ms ?? 0;
+      const dinicTime =
+        runs.find(r => r.algorithm_name === "Dinic")?.time_ms ?? 0;
+
       await db.execute(
-        "INSERT INTO correct_answers (game_id, player_name, answer_json) VALUES (?, ?, ?)",
+        `INSERT INTO traffic_simulation_results
+         (game_id, player_name, max_flow, player_choice, edmonds_karp_time_ms, dinic_time_ms)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           gameId,
           String(playerName).trim(),
-          JSON.stringify({ correct_max_flow: correct, player_choice: playerChoice }),
+          correct,
+          playerChoice,
+          ekTime,
+          dinicTime,
         ]
       );
     }
@@ -157,9 +184,9 @@ router.post("/submit", async (req, res) => {
     return res.status(500).json({
       error: "Internal server error",
       detail: err?.message,
-      code: err?.code,
     });
   }
 });
+
 
 export default router;

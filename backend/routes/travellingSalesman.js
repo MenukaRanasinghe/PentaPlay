@@ -79,9 +79,16 @@ router.post("/new-game", async (req, res) => {
           distanceMatrix,
           homeCity,
           selectedCities: unique,
+
+          algoTimes: {
+            nn: Math.round(t1e - t1s),
+            bf: Math.round(t2e - t2s),
+            hk: Math.round(t3e - t3s),
+          },
         }),
       ]
     );
+
     const gameId = gameResult.insertId;
 
     await db.execute(
@@ -93,8 +100,8 @@ router.post("/new-game", async (req, res) => {
        (?, ?, 'tour_length', ?, ?)`,
       [
         gameId, "Nearest Neighbour", nnResult.distance, Math.round(t1e - t1s),
-        gameId, "Brute Force",      bfResult.distance,  Math.round(t2e - t2s),
-        gameId, "Held-Karp DP",     hkResult.distance,  Math.round(t3e - t3s),
+        gameId, "Brute Force", bfResult.distance, Math.round(t2e - t2s),
+        gameId, "Held-Karp DP", hkResult.distance, Math.round(t3e - t3s),
       ]
     );
 
@@ -184,19 +191,30 @@ router.post("/submit", async (req, res) => {
     });
 
     if (outcome === "win") {
-      await db.execute(
-        "INSERT INTO correct_answers (game_id, player_name, answer_json) VALUES (?, ?, ?)",
-        [
-          gameId,
-          playerName,
-          JSON.stringify({
+      if (outcome === "win") {
+        const { algoTimes } = cfg;
+
+        await db.execute(
+          `INSERT INTO traveling_salesman_results
+     (game_id, player_name, home_city, selected_cities,
+      shortest_distance, shortest_route,
+      nn_time_ms, brute_force_time_ms, held_karp_time_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            gameId,
+            playerName,
             homeCity,
-            selectedCities,
-            route: correctRouteCities,
-            distance: correctDistance,
-          }),
-        ]
-      );
+            JSON.stringify(selectedCities),
+            correctDistance,
+            JSON.stringify(correctRouteCities),
+            algoTimes.nn,
+            algoTimes.bf,
+            algoTimes.hk,
+          ]
+        );
+      }
+
+
     }
 
     return res.json({
