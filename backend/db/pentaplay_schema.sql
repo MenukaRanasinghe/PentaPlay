@@ -110,3 +110,44 @@ ON tower_of_hanoi_results(game_id);
 
 
 
+CREATE TABLE IF NOT EXISTS eight_queens_results (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  game_id INT NOT NULL,
+  player_name VARCHAR(100) NOT NULL,
+
+  board_size INT NOT NULL,
+  correct_total INT NOT NULL,
+  player_choice INT NULL,
+
+  seq_time_ms INT NOT NULL,
+  threaded_time_ms INT NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_queens_game
+    FOREIGN KEY (game_id) REFERENCES games(id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX idx_queens_game
+ON eight_queens_results(game_id);
+
+
+
+CREATE TABLE IF NOT EXISTS queens_solution_claims (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  cycle_number INT NOT NULL,
+  solution_sig VARCHAR(255) NOT NULL,
+  player_name VARCHAR(100) NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  KEY idx_cycle (cycle_number)
+);
+
+
+
+
+

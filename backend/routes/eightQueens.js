@@ -14,8 +14,9 @@ const router = express.Router();
 router.post("/new-game", async (req, res) => {
   try {
     const { playerName } = req.body;
-    if (!playerName?.trim())
+    if (!playerName?.trim()) {
       return res.status(400).json({ error: "playerName required" });
+    }
 
     const [[cycleRow]] = await db.execute(
       "SELECT COALESCE(MAX(cycle_number),1) AS c FROM queens_solution_claims"
@@ -31,28 +32,36 @@ router.post("/new-game", async (req, res) => {
       claimedRows.map(r => r.solution_sig)
     );
 
-
     const seq = solveEightQueensSequential();
+    const thr = await solveEightQueensThreaded();
+
+    if (seq.total !== thr.total) {
+      throw new Error("Sequential / Threaded mismatch");
+    }
+
     const example = seq.solutions.find(
       sol => !claimedSigs.has(solutionToSig(sol))
     );
 
-    console.log("♕ Example Correct Eight Queens Solution:");
-    example.forEach((col, row) => {
-      console.log(`Row ${row + 1} → Column ${col + 1}`);
-    });
-
-    console.log(
-      "Pattern to submit:",
-      example.map(c => c + 1).join(",")
-    );
-
-    const thr = await solveEightQueensThreaded();
-
-    if (seq.total !== thr.total)
-      throw new Error("Sequential / Threaded mismatch");
+    if (example) {
+      console.log("♕ Example Correct Eight Queens Solution:");
+      example.forEach((col, row) => {
+        console.log(`Row ${row + 1} → Column ${col + 1}`);
+      });
+      console.log(
+        "Pattern to submit:",
+        example.map(c => c + 1).join(",")
+      );
+    } else {
+      console.log("♕ All solutions already claimed in this cycle.");
+    }
 
     const solutionSigs = seq.solutions.map(solutionToSig);
+
+    const algoTimes = {
+      Sequential: seq.timeMs,
+      "Threaded (Worker Threads)": thr.timeMs,
+    };
 
     const [game] = await db.execute(
       "INSERT INTO games (game_name, config_json) VALUES (?, ?)",
@@ -62,6 +71,7 @@ router.post("/new-game", async (req, res) => {
           boardSize: 8,
           totalSolutions: seq.total,
           solutionSigs,
+          algoTimes,
         }),
       ]
     );
@@ -104,6 +114,8 @@ router.post("/new-game", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
 
 router.post("/submit", async (req, res) => {
   try {
@@ -182,16 +194,36 @@ router.post("/submit", async (req, res) => {
       }
     }
 
-    if (outcome === "win") {
+    const isChoiceWin =
+      choice !== undefined &&
+      Number(choice) === totalSolutions;
+
+    const isBoardWin = solutionStatus === "new";
+
+    if (isChoiceWin || isBoardWin) {
+      const { algoTimes } = cfg;
+
       await db.execute(
-        "INSERT INTO correct_answers (game_id, player_name, answer_json) VALUES (?, ?, ?)",
+        `INSERT INTO eight_queens_results
+     (game_id, player_name, board_size,
+      correct_total, player_choice,
+      seq_time_ms, threaded_time_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           gameId,
           playerName,
-          JSON.stringify({ choice, totalSolutions }),
+          8,
+          totalSolutions,
+          isChoiceWin ? Number(choice) : null,
+          algoTimes["Sequential"],
+          algoTimes["Threaded (Worker Threads)"],
         ]
       );
     }
+
+
+
+
 
     res.json({
       status:
