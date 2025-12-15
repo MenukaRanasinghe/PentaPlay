@@ -125,6 +125,9 @@ CREATE TABLE IF NOT EXISTS tower_of_hanoi_results (
   correct_moves INT NOT NULL,
   player_moves INT NOT NULL,
 
+  optimal_sequence JSON NULL,
+  player_sequence JSON NULL,
+
   algo1_name VARCHAR(100) NOT NULL,
   algo1_time_ms INT NOT NULL,
   algo2_name VARCHAR(100) NOT NULL,

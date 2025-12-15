@@ -111,7 +111,7 @@ router.post("/new-game", async (req, res) => {
           dest,
           optimalMoves: correctMovesCount,
           optimalSequence,
-          algoTimes, 
+          algoTimes,
         }),
       ]
     );
@@ -242,10 +242,10 @@ router.post("/submit", async (req, res) => {
 
       await db.execute(
         `INSERT INTO tower_of_hanoi_results
-     (game_id, player_name, disks, pegs, source_peg, destination_peg,
-      correct_moves, player_moves, optimal_sequence, player_sequence,
-      algo1_name, algo1_time_ms, algo2_name, algo2_time_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+   (game_id, player_name, disks, pegs, source_peg, destination_peg,
+    correct_moves, player_moves, optimal_sequence, player_sequence,
+    algo1_name, algo1_time_ms, algo2_name, algo2_time_ms)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           gameId,
           playerName,
@@ -256,13 +256,14 @@ router.post("/submit", async (req, res) => {
           correctMovesCount,
           guess,
           JSON.stringify(optimalSequence),
-          sequenceText || "",
+          sequenceText ? JSON.stringify(sequenceText) : null,
           algo1,
           algoTimes[algo1],
           algo2,
           algoTimes[algo2],
         ]
       );
+
     }
 
 
