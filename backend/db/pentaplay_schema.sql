@@ -1,3 +1,11 @@
+CREATE DATABASE IF NOT EXISTS pentaplay
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE pentaplay;
+
+
+
 CREATE TABLE IF NOT EXISTS games (
   id INT AUTO_INCREMENT PRIMARY KEY,
   game_name VARCHAR(100) NOT NULL,
@@ -21,12 +29,12 @@ CREATE TABLE IF NOT EXISTS snake_ladder_results (
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+  KEY idx_snake_game (game_id),
+
   CONSTRAINT fk_snake_game
     FOREIGN KEY (game_id) REFERENCES games(id)
     ON DELETE CASCADE
 );
-
-CREATE INDEX idx_snake_game ON snake_ladder_results(game_id);
 
 
 
@@ -43,12 +51,12 @@ CREATE TABLE IF NOT EXISTS traffic_simulation_results (
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+  KEY idx_traffic_game (game_id),
+
   CONSTRAINT fk_traffic_game
     FOREIGN KEY (game_id) REFERENCES games(id)
     ON DELETE CASCADE
 );
-
-CREATE INDEX idx_traffic_game ON traffic_simulation_results(game_id);
 
 
 
@@ -69,13 +77,13 @@ CREATE TABLE IF NOT EXISTS traveling_salesman_results (
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+  KEY idx_traveling_salesman_game (game_id),
+
   CONSTRAINT fk_traveling_salesman_game
     FOREIGN KEY (game_id) REFERENCES games(id)
     ON DELETE CASCADE
 );
 
-CREATE INDEX idx_traveling_salesman_game
-ON traveling_salesman_results(game_id);
 
 
 
@@ -100,13 +108,13 @@ CREATE TABLE IF NOT EXISTS tower_of_hanoi_results (
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+  KEY idx_queens_game (game_id),
+
   CONSTRAINT fk_hanoi_game
     FOREIGN KEY (game_id) REFERENCES games(id)
     ON DELETE CASCADE
 );
 
-CREATE INDEX idx_hanoi_game
-ON tower_of_hanoi_results(game_id);
 
 
 
@@ -129,9 +137,6 @@ CREATE TABLE IF NOT EXISTS eight_queens_results (
     FOREIGN KEY (game_id) REFERENCES games(id)
     ON DELETE CASCADE
 );
-
-CREATE INDEX idx_queens_game
-ON eight_queens_results(game_id);
 
 
 
