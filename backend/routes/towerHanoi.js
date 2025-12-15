@@ -39,6 +39,8 @@ router.post("/new-game", async (req, res) => {
     let correctMovesCount;
     let optimalSequenceIndices;
 
+    const algoTimes = {};
+
     if (pegCount === 3) {
       const t1s = performance.now();
       const movesRec = hanoi3Recursive(disks, source, pegLabels[1], dest, []);
@@ -48,14 +50,24 @@ router.post("/new-game", async (req, res) => {
       const movesIter = hanoi3Iterative(disks, source, pegLabels[1], dest);
       const t2e = performance.now();
 
+      algoResults = [
+        {
+          name: "3-Peg Recursive",
+          moves: movesRec.length,
+          timeMs: Math.round(t1e - t1s),
+        },
+        {
+          name: "3-Peg Iterative",
+          moves: movesIter.length,
+          timeMs: Math.round(t2e - t2s),
+        },
+      ];
+
       correctMovesCount = movesRec.length;
       optimalSequenceIndices = movesRec;
+    }
 
-      algoResults = [
-        { name: "3-Peg Recursive", moves: movesRec.length, timeMs: Math.round(t1e - t1s) },
-        { name: "3-Peg Iterative", moves: movesIter.length, timeMs: Math.round(t2e - t2s) },
-      ];
-    } else {
+    else {
       const t1s = performance.now();
       const fs = frameStewart4(disks, pegLabels, source, dest);
       const t1e = performance.now();
@@ -64,13 +76,25 @@ router.post("/new-game", async (req, res) => {
       const naiveMoves = hanoi4NaiveVia3(disks, pegLabels);
       const t2e = performance.now();
 
+      algoResults = [
+        {
+          name: "4-Peg Frame-Stewart",
+          moves: fs.moves.length,
+          timeMs: Math.round(t1e - t1s),
+        },
+        {
+          name: "4-Peg via 3-Peg",
+          moves: naiveMoves.length,
+          timeMs: Math.round(t2e - t2s),
+        },
+      ];
+
       correctMovesCount = fs.moves.length;
       optimalSequenceIndices = fs.moves;
+    }
 
-      algoResults = [
-        { name: "4-Peg Frame-Stewart", moves: fs.moves.length, timeMs: Math.round(t1e - t1s) },
-        { name: "4-Peg via 3-Peg", moves: naiveMoves.length, timeMs: Math.round(t2e - t2s) },
-      ];
+    for (const ar of algoResults) {
+      algoTimes[ar.name] = ar.timeMs;
     }
 
     const optimalSequence = formatMoves(optimalSequenceIndices);
@@ -87,6 +111,7 @@ router.post("/new-game", async (req, res) => {
           dest,
           optimalMoves: correctMovesCount,
           optimalSequence,
+          algoTimes, 
         }),
       ]
     );
@@ -115,7 +140,7 @@ router.post("/new-game", async (req, res) => {
       disks,
       pegCount,
       optimalMoves: correctMovesCount,
-      choices,
+      algoTimes,
     });
 
     return res.json({
@@ -135,6 +160,7 @@ router.post("/new-game", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 router.post("/submit", async (req, res) => {
   try {
@@ -208,21 +234,37 @@ router.post("/submit", async (req, res) => {
     });
 
     if (outcome === "win") {
+      const { algoTimes } = cfg;
+
+      const algoNames = Object.keys(algoTimes);
+      const algo1 = algoNames[0];
+      const algo2 = algoNames[1];
+
       await db.execute(
-        "INSERT INTO correct_answers (game_id, player_name, answer_json) VALUES (?, ?, ?)",
+        `INSERT INTO tower_of_hanoi_results
+     (game_id, player_name, disks, pegs, source_peg, destination_peg,
+      correct_moves, player_moves, optimal_sequence, player_sequence,
+      algo1_name, algo1_time_ms, algo2_name, algo2_time_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           gameId,
           playerName,
-          JSON.stringify({
-            disks,
-            pegs,
-            moves: correctMovesCount,
-            playerSequenceText: sequenceText || "",
-            optimalSequence,
-          }),
+          disks,
+          pegs,
+          source,
+          dest,
+          correctMovesCount,
+          guess,
+          JSON.stringify(optimalSequence),
+          sequenceText || "",
+          algo1,
+          algoTimes[algo1],
+          algo2,
+          algoTimes[algo2],
         ]
       );
     }
+
 
     return res.json({
       gameId,

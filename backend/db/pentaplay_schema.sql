@@ -78,3 +78,35 @@ CREATE INDEX idx_traveling_salesman_game
 ON traveling_salesman_results(game_id);
 
 
+
+CREATE TABLE IF NOT EXISTS tower_of_hanoi_results (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  game_id INT NOT NULL,
+  player_name VARCHAR(100) NOT NULL,
+
+  disks INT NOT NULL,
+  pegs INT NOT NULL,
+  source_peg CHAR(1) NOT NULL,
+  destination_peg CHAR(1) NOT NULL,
+
+  correct_moves INT NOT NULL,
+  player_moves INT NOT NULL,
+
+  algo1_name VARCHAR(100) NOT NULL,
+  algo1_time_ms INT NOT NULL,
+  algo2_name VARCHAR(100) NOT NULL,
+  algo2_time_ms INT NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_hanoi_game
+    FOREIGN KEY (game_id) REFERENCES games(id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX idx_hanoi_game
+ON tower_of_hanoi_results(game_id);
+
+
+
